@@ -20,6 +20,7 @@ import streamlit as st
 
 DB_PATH = "nba_stats.db"
 METHODOLOGY_PATH = "scoring_plus_methodology.md"
+O_RATING_METHODOLOGY_PATH = "o_rating_methodology.md"
 
 st.set_page_config(page_title="Baseline", layout="wide")
 
@@ -588,11 +589,13 @@ def render_landing(df: pd.DataFrame, team_profile_df: pd.DataFrame) -> None:
 # --- About page ---------------------------------------------------------------
 
 
-def render_about() -> None:
-    render_top_nav("About")
-
-    with open(METHODOLOGY_PATH, encoding="utf-8") as f:
+def render_methodology(path: str) -> None:
+    with open(path, encoding="utf-8") as f:
         methodology = f.read()
+
+    if not methodology.strip():
+        st.info("Methodology coming soon.")
+        return
 
     # st.markdown can't load local image files, so split the doc on its
     # ![caption](path) lines and render each figure with st.image instead.
@@ -603,6 +606,16 @@ def render_about() -> None:
             mid.image(part, width="stretch")
         elif part.strip():
             st.markdown(part, unsafe_allow_html=True)
+
+
+def render_about() -> None:
+    render_top_nav("About")
+
+    player_tab, team_tab = st.tabs(["Player Statistics", "Team Statistics"])
+    with player_tab:
+        render_methodology(METHODOLOGY_PATH)
+    with team_tab:
+        render_methodology(O_RATING_METHODOLOGY_PATH)
 
 
 # --- Players page ---------------------------------------------------------------
