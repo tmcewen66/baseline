@@ -598,7 +598,9 @@ def render_about() -> None:
     # ![caption](path) lines and render each figure with st.image instead.
     for i, part in enumerate(re.split(r"^!\[[^\]]*\]\(([^)]+)\)\s*$", methodology, flags=re.MULTILINE)):
         if i % 2:
-            st.image(part, width="stretch")
+            # Center each figure in the middle column so it doesn't span the wide layout.
+            _, mid, _ = st.columns([1, 3, 1])
+            mid.image(part, width="stretch")
         elif part.strip():
             st.markdown(part)
 
