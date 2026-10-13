@@ -43,7 +43,7 @@ Unlike ERA+ and OPS+, Scoring+ adjusts for era only and not for physical environ
 **The Formula:**
 
 $$
-\text{Scoring+} = 100 + 0.205\,(\text{PTS+} - 100) + 0.795\,(\text{TS+} - 100)
+\text{Scoring}^{+} = 100 + 0.205\,(\text{PTS}^{+} - 100) + 0.795\,(\text{TS}^{+} - 100)
 $$
 
 The next two sections will define PTS+ and TS+ further, and the section after that explains where the 0.205 and 0.795 weights come from.
@@ -67,7 +67,7 @@ Instead, I decided to use points per 100 possessions to build PTS+. As a rate st
 **The Formula:**
 
 $$
-\text{PTS+} = \frac{\text{Player points per 100 possessions}}{\text{League average points per 100 possessions}} \times 100
+\text{PTS}^{+} = \frac{\text{Player points per 100 possessions}}{\text{League average points per 100 possessions}} \times 100
 $$
 
 A PTS+ of 148, like Parker's, means that he scored at a rate 48% higher than the average player on the floor that season.
@@ -92,7 +92,7 @@ $$
 TS+ then indexes a players TS% to the league average like PTS+:
 
 $$
-\text{TS+} = \frac{\text{Player TS\%}}{\text{League Average TS\%}} \times 100
+\text{TS}^{+} = \frac{\text{Player TS\%}}{\text{League Average TS\%}} \times 100
 $$
 
 A TS+ of 100, like Simons', means he was an exact league-average shooter that year in efficiency terms. His .581 TS% looks strong in isolation, but in the efficiency and analytic driven league of 2022-23, he was simply average.
@@ -141,7 +141,7 @@ That balance is not a flaw or a hidden assumption in the formula, it is the data
 | --- | --- | --- | --- |
 | PTS+ coefficient (z) | 0.6969 | 0.3420 | 0.51944 |
 | TS+ coefficient (z) | 0.3491 | 0.6898 | 0.51945 |
-| R² | 0.736 | 0.718 | |
+| R² | 0.736 | 0.718 | N/A |
 
 The sample covers every season from 2000-01 through 2025-26, limited to players with at least 1,500 minutes (n=4865 player-seasons).
 
