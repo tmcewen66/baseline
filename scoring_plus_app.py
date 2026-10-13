@@ -9,6 +9,7 @@ Run with: .conda/bin/streamlit run scoring_plus_app.py
 
 import base64
 import html
+import re
 import sqlite3
 
 import numpy as np
@@ -331,7 +332,7 @@ def render_colored_subheader(text: str, color: str | None, container=None) -> No
 def render_top_nav(current_page: str) -> None:
     st.markdown(
         "<h1 style='text-align:center; font-size:4rem; font-weight:800; margin:0 0 0.5rem;'>"
-        "<span style='color:#2a78d6;'>NBA</span><span style='color:#c0392b;'>+</span>"
+        "<span style='color:#2a78d6;'>Base</span><span style='color:#c0392b;'>line</span>"
         "</h1>",
         unsafe_allow_html=True,
     )
@@ -591,7 +592,15 @@ def render_about() -> None:
     render_top_nav("About")
 
     with open(METHODOLOGY_PATH, encoding="utf-8") as f:
-        st.markdown(f.read())
+        methodology = f.read()
+
+    # st.markdown can't load local image files, so split the doc on its
+    # ![caption](path) lines and render each figure with st.image instead.
+    for i, part in enumerate(re.split(r"^!\[[^\]]*\]\(([^)]+)\)\s*$", methodology, flags=re.MULTILINE)):
+        if i % 2:
+            st.image(part, width="stretch")
+        elif part.strip():
+            st.markdown(part)
 
 
 # --- Players page ---------------------------------------------------------------
