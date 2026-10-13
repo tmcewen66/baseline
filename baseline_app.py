@@ -602,7 +602,7 @@ def render_about() -> None:
             _, mid, _ = st.columns([1, 3, 1])
             mid.image(part, width="stretch")
         elif part.strip():
-            st.markdown(part)
+            st.markdown(part, unsafe_allow_html=True)
 
 
 # --- Players page ---------------------------------------------------------------

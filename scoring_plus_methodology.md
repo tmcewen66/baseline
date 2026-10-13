@@ -1,4 +1,4 @@
-# Scoring+ Methodology
+<h1 align="center">Scoring+ Methodology</h1>
 
 ## Introduction
 
