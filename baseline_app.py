@@ -20,7 +20,7 @@ import streamlit as st
 
 DB_PATH = "nba_stats.db"
 METHODOLOGY_PATH = "scoring_plus_methodology.md"
-O_RATING_METHODOLOGY_PATH = "o_rating_methodology.md"
+O_RATING_METHODOLOGY_PATH = "o_rating_plus_methodology.md"
 
 st.set_page_config(page_title="Baseline", layout="wide")
 
