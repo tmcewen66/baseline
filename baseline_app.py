@@ -9,6 +9,7 @@ Run from the project root with: .conda/bin/streamlit run baseline_app.py
 
 import base64
 import html
+import os
 import re
 import sqlite3
 from pathlib import Path
@@ -22,8 +23,18 @@ import streamlit as st
 PROJECT_ROOT = Path(__file__).resolve().parent
 # Slim copy of the app tables, rebuilt daily by run_pipeline.py (see pipeline/export_app_db.py).
 DB_PATH = str(PROJECT_ROOT / "data" / "app.db")
-# How long loaded data is cached before re-reading the database, so daily updates show up.
+# Backstop expiry for cached data. The main refresh trigger is data_version() below.
 DATA_TTL = "6h"
+
+
+def data_version(db_path: str = DB_PATH) -> tuple[float, int]:
+    """
+    Changes whenever app.db is replaced. Passed into each cached loader so a new
+    app.db (e.g. from the daily update) is picked up on the next page load,
+    even though Streamlit Cloud doesn't restart the app when only data changes.
+    """
+    stat = os.stat(db_path)
+    return stat.st_mtime, stat.st_size
 METHODOLOGY_PATH = PROJECT_ROOT / "docs" / "scoring_plus_methodology.md"
 O_RATING_METHODOLOGY_PATH = PROJECT_ROOT / "docs" / "o_rating_plus_methodology.md"
 
@@ -31,7 +42,7 @@ st.set_page_config(page_title="Baseline", layout="wide")
 
 
 @st.cache_data(ttl=DATA_TTL)
-def load_player_profile(db_path: str = DB_PATH) -> pd.DataFrame:
+def load_player_profile(version: tuple, db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         df = pd.read_sql("SELECT * FROM player_profile", con)
     df["qualified"] = df["qualified"].astype(bool)
@@ -39,7 +50,7 @@ def load_player_profile(db_path: str = DB_PATH) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=DATA_TTL)
-def load_team_profile(db_path: str = DB_PATH) -> pd.DataFrame:
+def load_team_profile(version: tuple, db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         df = pd.read_sql("SELECT * FROM team_profile", con)
     df["season"] = (df["season_end_year"] - 1).astype(str) + "-" + df["season_end_year"].astype(str)  # type: ignore
@@ -47,7 +58,7 @@ def load_team_profile(db_path: str = DB_PATH) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=DATA_TTL)
-def load_team_colors(db_path: str = DB_PATH) -> pd.DataFrame:
+def load_team_colors(version: tuple, db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         return pd.read_sql(
             "SELECT team_name, color_1_hex, color_1_general, color_2_hex, color_2_general FROM team_colors",
@@ -56,7 +67,7 @@ def load_team_colors(db_path: str = DB_PATH) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=DATA_TTL)
-def load_career_averages(db_path: str = DB_PATH) -> pd.DataFrame:
+def load_career_averages(version: tuple, db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         return pd.read_sql("SELECT * FROM career_averages", con)
 
@@ -2447,10 +2458,11 @@ def render_customized_analysis(df: pd.DataFrame, team_profile_df: pd.DataFrame) 
     st.plotly_chart(scatter_fig, use_container_width=True, key=f"custom_analysis_scatter_{mode}")
 
 
-df = load_player_profile()
-team_profile_df = load_team_profile()
-team_colors_df = load_team_colors()
-career_averages_df = load_career_averages()
+version = data_version()
+df = load_player_profile(version)
+team_profile_df = load_team_profile(version)
+team_colors_df = load_team_colors(version)
+career_averages_df = load_career_averages(version)
 
 landing_page = st.Page(
     lambda: render_landing(df, team_profile_df), title="Home", url_path="landing", default=True
