@@ -544,6 +544,42 @@ def render_player_stats_table(
 # --- Home page ----------------------------------------------------------------
 
 
+def render_player_leaders(qualified_players_df: pd.DataFrame, leaders_label: str, show_season: bool) -> None:
+    st.subheader(f"Top 5 Players — {leaders_label} (qualified players)")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("**Scoring+**")
+        render_leaderboard(qualified_players_df, "scoring_plus", show_season)
+    with col2:
+        st.markdown("**Pts+**")
+        render_leaderboard(qualified_players_df, "pts_plus", show_season)
+    with col3:
+        st.markdown("**TS+**")
+        render_leaderboard(qualified_players_df, "ts_plus", show_season)
+
+
+def render_team_leaders(qualified_teams_df: pd.DataFrame, leaders_label: str, show_season: bool) -> None:
+    st.subheader(f"Top 5 Teams — {leaders_label} (qualified teams)")
+    col1, col2, col3 = st.columns(3)
+    for col, (label, metric) in zip(
+        (col1, col2, col3),
+        (("oRating+", "team_orating_plus"), ("TS+", "team_ts_plus"), ("Possession+", "team_possession_plus")),
+    ):
+        with col:
+            st.markdown(f"**{label}**")
+            render_leaderboard(
+                qualified_teams_df, metric, show_season,
+                name_col="team_name", empty_message="No qualified teams yet.",
+            )
+
+
+def latest_qualified_season(qualified_df: pd.DataFrame) -> pd.DataFrame:
+    """Rows from the most recent season that has any qualified rows."""
+    if qualified_df.empty:
+        return qualified_df
+    return qualified_df[qualified_df["season_end_year"] == qualified_df["season_end_year"].max()]
+
+
 def render_landing(df: pd.DataFrame, team_profile_df: pd.DataFrame) -> None:
     render_top_nav("Home")
 
@@ -556,52 +592,31 @@ def render_landing(df: pd.DataFrame, team_profile_df: pd.DataFrame) -> None:
         "Season", ["All Seasons"] + seasons_by_year["season"].tolist(), key="landing_season_choice"
     )
 
-    if season_choice == "All Seasons":
-        filtered_players_df = df
-        filtered_teams_df = team_profile_df
-    else:
-        filtered_players_df = df[df["season"] == season_choice]
-        filtered_teams_df = team_profile_df[team_profile_df["season"] == season_choice]
+    if season_choice != "All Seasons":
+        season_players_df = df[(df["season"] == season_choice) & df["qualified"]]
+        season_teams_df = team_profile_df[(team_profile_df["season"] == season_choice) & team_profile_df["qualified"]]
+        render_player_leaders(season_players_df, season_choice, show_season=False)
+        st.divider()
+        render_team_leaders(season_teams_df, season_choice, show_season=False)
+        return
 
-    qualified_players_df = filtered_players_df[filtered_players_df["qualified"]]
-    qualified_teams_df = filtered_teams_df[filtered_teams_df["qualified"]]
-    show_season_in_top = season_choice == "All Seasons"
-    leaders_label = "All-Time" if season_choice == "All Seasons" else season_choice
+    # All Seasons: the latest season with qualified players/teams, then all-time.
+    # Early in a season nobody has reached the games minimum yet, so "latest"
+    # stays on the previous season until they do.
+    qualified_players_df = df[df["qualified"]]
+    qualified_teams_df = team_profile_df[team_profile_df["qualified"]]
 
-    st.subheader(f"Top 5 Players — {leaders_label} (qualified players)")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("**Scoring+**")
-        render_leaderboard(qualified_players_df, "scoring_plus", show_season_in_top)
-    with col2:
-        st.markdown("**Pts+**")
-        render_leaderboard(qualified_players_df, "pts_plus", show_season_in_top)
-    with col3:
-        st.markdown("**TS+**")
-        render_leaderboard(qualified_players_df, "ts_plus", show_season_in_top)
+    recent_players_df = latest_qualified_season(qualified_players_df)
+    if not recent_players_df.empty:
+        render_player_leaders(recent_players_df, recent_players_df["season"].iloc[0], show_season=False)
+    render_player_leaders(qualified_players_df, "All-Time", show_season=True)
 
     st.divider()
 
-    st.subheader(f"Top 5 Teams — {leaders_label} (qualified teams)")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("**oRating+**")
-        render_leaderboard(
-            qualified_teams_df, "team_orating_plus", show_season_in_top,
-            name_col="team_name", empty_message="No qualified teams yet.",
-        )
-    with col2:
-        st.markdown("**TS+**")
-        render_leaderboard(
-            qualified_teams_df, "team_ts_plus", show_season_in_top,
-            name_col="team_name", empty_message="No qualified teams yet.",
-        )
-    with col3:
-        st.markdown("**Possession+**")
-        render_leaderboard(
-            qualified_teams_df, "team_possession_plus", show_season_in_top,
-            name_col="team_name", empty_message="No qualified teams yet.",
-        )
+    recent_teams_df = latest_qualified_season(qualified_teams_df)
+    if not recent_teams_df.empty:
+        render_team_leaders(recent_teams_df, recent_teams_df["season"].iloc[0], show_season=False)
+    render_team_leaders(qualified_teams_df, "All-Time", show_season=True)
 
 
 # --- About page ---------------------------------------------------------------
