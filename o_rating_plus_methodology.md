@@ -25,7 +25,7 @@ oRating+ is built in the same statistical style as Scoring+ in that it also foll
 **The Formula:**
 
 $$
-\text{oRating+} = \frac{\text{Team Offensive Rating}}{\text{League Average Offensive Rating}} \times 100
+\text{oRating}^{+} = \frac{\text{Team Offensive Rating}}{\text{League Average Offensive Rating}} \times 100
 $$
 
 Unlike Scoring+, oRating+ doesn't need a weighted formula to be computed. Scoring+ has to combine volume and efficiency because no single player stat captures both and different players play different roles in an offense, but for teams offensive rating already does that job. It measures points per 100 possessions, controlling for pace and reflects how well an offense turns its possessions into points, which is the team-level version of what Scoring+ is meant to measure for a player. There are much less complications when it comes to measuring an entire offense because team-level stats are all standardized as teams play the same amount of games and minutes and you don't have to account for outliers due to a smaller sample size. All that's left is to put it in the context of its league, so oRating+ simply indexes each team's offensive rating to the league average of its season.
@@ -63,7 +63,7 @@ $$
 TS+ then indexes a teams TS% to the league average like PTS+:
 
 $$
-\text{TS+} = \frac{\text{Team TS\%}}{\text{League Average TS\%}} \times 100
+\text{TS}^{+} = \frac{\text{Team TS\%}}{\text{League Average TS\%}} \times 100
 $$
 
 A team with a TS+ of 109 shot 9% more efficiently than the league average that season.
@@ -77,7 +77,7 @@ As mentioned before, there are two components of what drives a team's offensive 
 Because shooting efficiency drives most of an offense's success, oRating+ and TS+ are strongly correlated across teams, with the Pearson correlation coefficient (r) equal to 0.86. To isolate the part that TS+ doesn't explain, I fit a simple linear regression of team oRating+ on team TS+ across every team-season since 2000-01. The fitted line gives each team an expected oRating+ based only on its shooting efficiency. The difference between its actual and expected oRating+ is the residual, which I called PosE (possession effect). This can be be shown as:
 
 $$
-\text{PosE} = \text{oRating+} - (a + b \times \text{TS+})
+\text{PosE} = \text{oRating}^{+} - (a + b \times \text{TS}^{+})
 $$
 
 - **a:** the intercept from the regression of oRating+ on TS+ (a=17.560)
@@ -86,19 +86,19 @@ $$
 So with the given values plugged in:
 
 $$
-\text{PosE} = \text{oRating+} - (17.560 + 0.824 \times \text{TS+})
+\text{PosE} = \text{oRating}^{+} - (17.560 + 0.824 \times \text{TS}^{+})
 $$
 
 In simpler terms it is also just:
 
 $$
-\text{PosE} = \text{Actual Team oRating+} - \text{Expected Team oRating+}
+\text{PosE} = \text{Actual Team oRating}^{+} - \text{Expected Team oRating}^{+}
 $$
 
 PosE is then shifted onto the same 100-based scale as the other stats:
 
 $$
-\text{Possession+} = 100 + \text{PosE}
+\text{Possession}^{+} = 100 + \text{PosE}
 $$
 
 A team that scores exactly as many points per 100 possessions as its shooting efficiency predicts has a Possession+ of 100. A team above 100 produced more points per 100 possessions than its efficiency explains, and the opposite for a team below 100.
