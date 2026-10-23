@@ -21,6 +21,7 @@ Raw scoring has also grown faster than efficiency. Since the 2000-01 season, lea
 To help illustrate this problem, I want to look at Tony Parker's 2012-13 season and Anfernee Simons' 2022-23 season. These two seasons happened a decade apart, Parker's at the low point of 20-point scorers and Simons' at the high point. Now, if you were to look at their conventional scoring stats without that context, you would see two almost identical scoring seasons.
 
 ![On Paper, These Seasons Look Nearly Identical](images/parker_vs_simons_raw_stats.png)
+<p style="text-align: center; font-size: 0.8em;"><em>Parker Photo: Streeter Lecka/Getty Images. Simons Photo: Portland Trail Blazers/NBA</em></p>
 
 While scoring isn't the only factor in accolades, it would be considered the strength of each of these guards, and each of these respective seasons was received very differently in that regard. In the 2012-13 season, Parker finished 6th in MVP voting, made an All-NBA Second Team and the All-Star team. He also was the leading scorer on a Spurs team that finished with the 3rd best record, the 7th ranked offense and was one Ray Allen shot away from being champions. Simons on the other hand collected no accolades and was a second or third option on a bottom-five Trail Blazers Team that finished 17th in offensive rating.
 
