@@ -2,6 +2,8 @@
 
 <p align="center"><em>Era-adjusted NBA statistics, built so a scoring season from 2005 and one from 2025 can be compared on the same scale.</em></p>
 
+<p align="center"><a href="https://baselineanalytics.streamlit.app/"><strong>Open the live app</strong></a></p>
+
 ## Why this project exists
 
 NBA offense has changed a lot in the past decade. Since 2000-01, league points per game has risen about 22% and offensive rating about 13%. In 2012-13, only 11 players averaged 20+ points per game (minimum 1,500 minutes). By 2022-23, 52 did. That makes raw numbers from different seasons hard to compare.
@@ -48,7 +50,7 @@ Full write-up: [oRating+ Methodology](docs/o_rating_plus_methodology.md)
 
 ## The app
 
-The Streamlit app, **Baseline**, has pages for:
+The Streamlit app, **[Baseline](https://baselineanalytics.streamlit.app/)**, has pages for:
 
 - **Players**: season leaderboards for Scoring+, PTS+, TS+ and traditional stats, filterable by season and scoring-title qualification
 - **Player Breakdown**: a single player's seasons and career averages
