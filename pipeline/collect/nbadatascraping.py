@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-Fetches per-100-possessions, scoring splits, and advanced stats for every
-NBA player and team from 2000-01 through 2025-26 using the nba_api package
-and saves them to SQLite database tables 'per_100_stats', 'scoring_splits',
-'team_per_100_stats', 'team_per_game_stats', and 'team_advanced_stats' in
-nba_stats.db.
+Fetches per-100-possessions, scoring splits, and advanced stats for NBA
+players and teams using the nba_api package and saves them to SQLite tables
+'per_100_stats', 'scoring_splits', 'team_per_100_stats', 'team_per_game_stats',
+and 'team_advanced_stats' in nba_stats.db.
+
+By default only the current season is fetched, and only its rows are replaced.
+Use --all to rebuild every season from 2000-01 on, or --season END_YEAR to
+refresh specific seasons. Any failed request stops the script with an error so
+a season is never silently dropped.
 
 Rebuilds the BR-to-NBA slug mapping (br_to_nba_mapping.py) afterward, since
 saving per_100_stats/scoring_splits replaces those tables and drops their
@@ -13,17 +17,17 @@ populated.
 """
 
 import sqlite3
+import sys
 import time
 import pandas as pd
 from nba_api.stats.endpoints import leaguedashplayerstats, leaguedashteamstats
 from pathlib import Path
 
-try:
-    from . import br_to_nba_mapping  # run as: python -m pipeline.collect.nbadatascraping
-except ImportError:
-    import br_to_nba_mapping  # run as: python pipeline/collect/nbadatascraping.py
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from pipeline.collect import br_to_nba_mapping  # noqa: E402
+from pipeline.common import all_seasons, parse_season_args, replace_season_rows, season_label  # noqa: E402
+
 DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 TABLE_NAME = "per_100_stats"
 SCORING_TABLE_NAME = "scoring_splits"
@@ -31,8 +35,6 @@ TEAM_TABLE_NAME = "team_per_100_stats"
 TEAM_PER_GAME_TABLE_NAME = "team_per_game_stats"
 TEAM_ADVANCED_TABLE_NAME = "team_advanced_stats"
 REQUEST_DELAY_SECONDS = 3
-
-SEASONS = list(range(2001, 2027))  # 2000-01 through 2025-26
 
 # Stat columns that get the per_100_ prefix; everything else is just lowercased
 _PER_100_STAT_COLS = {
@@ -51,7 +53,41 @@ def _rename_columns(df: pd.DataFrame, prefix: str = "per_100") -> pd.DataFrame:
 
 
 def _season_str(end_year: int) -> str:
-    return f"{end_year - 1}-{str(end_year)[-2:]}"
+    return season_label(end_year)
+
+
+def _fetch_seasons(fetch_fn, seasons: list | None, what: str, unit: str) -> pd.DataFrame:
+    """
+    Calls fetch_fn(end_year) for each season and concatenates the results.
+    Seasons with no rows (not started yet) are skipped. Any request error
+    stops everything, so a failed season can't quietly go missing.
+    """
+    seasons = seasons or all_seasons()
+    frames = []
+    for year in seasons:
+        print(f"Fetching {_season_str(year)} {what}...", end=" ", flush=True)
+        try:
+            df = fetch_fn(year)
+        except Exception as e:
+            print("ERROR")
+            raise RuntimeError(f"Failed to fetch {what} for {_season_str(year)}: {e}") from e
+        finally:
+            time.sleep(REQUEST_DELAY_SECONDS)
+        if df.empty:
+            print("no games played yet, skipping")
+            continue
+        print(f"{len(df)} {unit}")
+        frames.append(df)
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
+
+
+def _write(con, table: str, df: pd.DataFrame, full_rebuild: bool) -> None:
+    if full_rebuild:
+        df.to_sql(table, con, if_exists="replace", index=False)
+    else:
+        replace_season_rows(con, table, df, sorted(df["season_end_year"].unique().tolist()))
 
 
 def fetch_season(end_year: int) -> pd.DataFrame:
@@ -64,24 +100,14 @@ def fetch_season(end_year: int) -> pd.DataFrame:
     return df
 
 
-def fetch_all_seasons(seasons: list = SEASONS) -> pd.DataFrame:
-    frames = []
-    for year in seasons:
-        print(f"Fetching {_season_str(year)}...", end=" ", flush=True)
-        try:
-            df = fetch_season(year)
-            print(f"{len(df)} players")
-            frames.append(df)
-        except Exception as e:
-            print(f"ERROR: {e}")
-        time.sleep(REQUEST_DELAY_SECONDS)
-    return pd.concat(frames, ignore_index=True)
+def fetch_all_seasons(seasons: list | None = None) -> pd.DataFrame:
+    return _fetch_seasons(fetch_season, seasons, "player per-100 stats", "players")
 
 
-def save_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH):
+def save_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH, full_rebuild: bool = True):
     df = _rename_columns(df)
     with sqlite3.connect(db_path) as con:
-        df.to_sql(TABLE_NAME, con, if_exists="replace", index=False)
+        _write(con, TABLE_NAME, df, full_rebuild)
         con.execute(
             f"CREATE INDEX IF NOT EXISTS idx_per100_player_season "
             f"ON {TABLE_NAME} (player_id, season_end_year)"
@@ -99,27 +125,17 @@ def fetch_scoring_season(end_year: int) -> pd.DataFrame:
     return df
 
 
-def fetch_all_scoring_seasons(seasons: list = SEASONS) -> pd.DataFrame:
-    frames = []
-    for year in seasons:
-        print(f"Fetching {_season_str(year)} scoring splits...", end=" ", flush=True)
-        try:
-            df = fetch_scoring_season(year)
-            print(f"{len(df)} players")
-            frames.append(df)
-        except Exception as e:
-            print(f"ERROR: {e}")
-        time.sleep(REQUEST_DELAY_SECONDS)
-    return pd.concat(frames, ignore_index=True)
+def fetch_all_scoring_seasons(seasons: list | None = None) -> pd.DataFrame:
+    return _fetch_seasons(fetch_scoring_season, seasons, "scoring splits", "players")
 
 
-def save_scoring_splits_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH):
+def save_scoring_splits_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH, full_rebuild: bool = True):
     # Scoring-measure-type columns are shot-location/assist percentages, not
     # counting stats, so just lowercase column names rather than the
     # per_100_ prefix used for per_100_stats.
     df = df.rename(columns={col: col.lower() for col in df.columns})
     with sqlite3.connect(db_path) as con:
-        df.to_sql(SCORING_TABLE_NAME, con, if_exists="replace", index=False)
+        _write(con, SCORING_TABLE_NAME, df, full_rebuild)
         con.execute(
             f"CREATE INDEX IF NOT EXISTS idx_scoring_splits_player_season "
             f"ON {SCORING_TABLE_NAME} (player_id, season_end_year)"
@@ -137,24 +153,14 @@ def fetch_team_season(end_year: int) -> pd.DataFrame:
     return df
 
 
-def fetch_all_team_seasons(seasons: list = SEASONS) -> pd.DataFrame:
-    frames = []
-    for year in seasons:
-        print(f"Fetching {_season_str(year)} teams...", end=" ", flush=True)
-        try:
-            df = fetch_team_season(year)
-            print(f"{len(df)} teams")
-            frames.append(df)
-        except Exception as e:
-            print(f"ERROR: {e}")
-        time.sleep(REQUEST_DELAY_SECONDS)
-    return pd.concat(frames, ignore_index=True)
+def fetch_all_team_seasons(seasons: list | None = None) -> pd.DataFrame:
+    return _fetch_seasons(fetch_team_season, seasons, "teams", "teams")
 
 
-def save_team_stats_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH):
+def save_team_stats_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH, full_rebuild: bool = True):
     df = _rename_columns(df)
     with sqlite3.connect(db_path) as con:
-        df.to_sql(TEAM_TABLE_NAME, con, if_exists="replace", index=False)
+        _write(con, TEAM_TABLE_NAME, df, full_rebuild)
         con.execute(
             f"CREATE INDEX IF NOT EXISTS idx_team_per100_team_season "
             f"ON {TEAM_TABLE_NAME} (team_id, season_end_year)"
@@ -172,24 +178,14 @@ def fetch_team_per_game_season(end_year: int) -> pd.DataFrame:
     return df
 
 
-def fetch_all_team_per_game_seasons(seasons: list = SEASONS) -> pd.DataFrame:
-    frames = []
-    for year in seasons:
-        print(f"Fetching {_season_str(year)} team per-game stats...", end=" ", flush=True)
-        try:
-            df = fetch_team_per_game_season(year)
-            print(f"{len(df)} teams")
-            frames.append(df)
-        except Exception as e:
-            print(f"ERROR: {e}")
-        time.sleep(REQUEST_DELAY_SECONDS)
-    return pd.concat(frames, ignore_index=True)
+def fetch_all_team_per_game_seasons(seasons: list | None = None) -> pd.DataFrame:
+    return _fetch_seasons(fetch_team_per_game_season, seasons, "team per-game stats", "teams")
 
 
-def save_team_per_game_stats_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH):
+def save_team_per_game_stats_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH, full_rebuild: bool = True):
     df = _rename_columns(df, prefix="per_game")
     with sqlite3.connect(db_path) as con:
-        df.to_sql(TEAM_PER_GAME_TABLE_NAME, con, if_exists="replace", index=False)
+        _write(con, TEAM_PER_GAME_TABLE_NAME, df, full_rebuild)
         con.execute(
             f"CREATE INDEX IF NOT EXISTS idx_team_per_game_team_season "
             f"ON {TEAM_PER_GAME_TABLE_NAME} (team_id, season_end_year)"
@@ -207,26 +203,16 @@ def fetch_team_advanced_season(end_year: int) -> pd.DataFrame:
     return df
 
 
-def fetch_all_team_advanced_seasons(seasons: list = SEASONS) -> pd.DataFrame:
-    frames = []
-    for year in seasons:
-        print(f"Fetching {_season_str(year)} team advanced stats...", end=" ", flush=True)
-        try:
-            df = fetch_team_advanced_season(year)
-            print(f"{len(df)} teams")
-            frames.append(df)
-        except Exception as e:
-            print(f"ERROR: {e}")
-        time.sleep(REQUEST_DELAY_SECONDS)
-    return pd.concat(frames, ignore_index=True)
+def fetch_all_team_advanced_seasons(seasons: list | None = None) -> pd.DataFrame:
+    return _fetch_seasons(fetch_team_advanced_season, seasons, "team advanced stats", "teams")
 
 
-def save_team_advanced_stats_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH):
+def save_team_advanced_stats_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH, full_rebuild: bool = True):
     # Advanced stats are already rates/ratings (no per-100 counting stats), so
     # just lowercase column names rather than applying the per_100_ prefix.
     df = df.rename(columns={col: col.lower() for col in df.columns})
     with sqlite3.connect(db_path) as con:
-        df.to_sql(TEAM_ADVANCED_TABLE_NAME, con, if_exists="replace", index=False)
+        _write(con, TEAM_ADVANCED_TABLE_NAME, df, full_rebuild)
         con.execute(
             f"CREATE INDEX IF NOT EXISTS idx_team_advanced_team_season "
             f"ON {TEAM_ADVANCED_TABLE_NAME} (team_id, season_end_year)"
@@ -235,25 +221,31 @@ def save_team_advanced_stats_to_sqlite(df: pd.DataFrame, db_path: str = DB_PATH)
 
 
 if __name__ == "__main__":
-    master_df = fetch_all_seasons()
-    save_to_sqlite(master_df)
-    print(f"Done. {master_df['season_end_year'].nunique()} seasons loaded.")
+    seasons = parse_season_args("Fetch player and team stats from NBA.com via nba_api.")
+    full_rebuild = seasons is None
 
-    scoring_master_df = fetch_all_scoring_seasons()
-    save_scoring_splits_to_sqlite(scoring_master_df)
-    print(f"Done. {scoring_master_df['season_end_year'].nunique()} seasons of scoring splits loaded.")
+    steps = [
+        ("player per-100 stats", fetch_all_seasons, save_to_sqlite),
+        ("scoring splits", fetch_all_scoring_seasons, save_scoring_splits_to_sqlite),
+        ("team per-100 stats", fetch_all_team_seasons, save_team_stats_to_sqlite),
+        ("team per-game stats", fetch_all_team_per_game_seasons, save_team_per_game_stats_to_sqlite),
+        ("team advanced stats", fetch_all_team_advanced_seasons, save_team_advanced_stats_to_sqlite),
+    ]
 
+    # Fetch everything before writing anything, so a failure partway through
+    # never leaves the database with some tables updated and others not.
+    results = [(what, fetch(seasons), save) for what, fetch, save in steps]
+    if all(df.empty for _, df, _ in results):
+        print("\nNo season data to save. Database left unchanged.")
+        sys.exit(0)
+    missing = [what for what, df, _ in results if df.empty]
+    if missing:
+        raise RuntimeError(f"Some endpoints returned no data: {missing}")
+
+    for _, df, save in results:
+        save(df, full_rebuild=full_rebuild)
+
+    # New per_100_stats/scoring_splits rows come in without a slug, so rebuild
+    # the BR-to-NBA mapping to fill it in.
     print("\nRebuilding BR-to-NBA slug mapping...")
     br_to_nba_mapping.main()
-
-    team_master_df = fetch_all_team_seasons()
-    save_team_stats_to_sqlite(team_master_df)
-    print(f"Done. {team_master_df['season_end_year'].nunique()} seasons of team stats loaded.")
-
-    team_per_game_master_df = fetch_all_team_per_game_seasons()
-    save_team_per_game_stats_to_sqlite(team_per_game_master_df)
-    print(f"Done. {team_per_game_master_df['season_end_year'].nunique()} seasons of team per-game stats loaded.")
-
-    team_advanced_master_df = fetch_all_team_advanced_seasons()
-    save_team_advanced_stats_to_sqlite(team_advanced_master_df)
-    print(f"Done. {team_advanced_master_df['season_end_year'].nunique()} seasons of team advanced stats loaded.")

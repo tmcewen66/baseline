@@ -14,3 +14,7 @@ __pycache__/
 .conda/
 
 .databricks
+
+# Full database lives on the data-latest GitHub Release (see .github/workflows/daily-update.yml)
+data/nba_stats.db
+data/app.db.tmp

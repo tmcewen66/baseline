@@ -8,14 +8,22 @@ rating explained by shooting efficiency alone) and team_possession_plus
 recenters that residual at 100, isolating each team's non-shooting
 (possession-based) scoring contribution. Each metric also gets a 1-30
 (best-to-worst) rank within its season.
+
+The regression is fit on completed seasons only and then applied to every
+team-season, including one in progress. Otherwise each day's partial-season
+data would shift Possession+ for every historical team.
 """
 
 import sqlite3
+import sys
 import pandas as pd
 import statsmodels.api as sm
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from pipeline.common import in_progress_season  # noqa: E402
+
 DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 
 
@@ -44,9 +52,14 @@ def compute_team_scoring_plus(
     df["team_orating_plus"] = (df["off_rating"] / df["league_off_rating"]) * 100
     df["team_ts_plus"] = (df["ts_pct"] / df["league_ts_pct"]) * 100
 
-    X = sm.add_constant(df["team_ts_plus"])
-    resid_model = sm.OLS(df["team_orating_plus"], X).fit()
-    df["team_possession_residual"] = resid_model.resid
+    current = in_progress_season()
+    completed = df[df["season_end_year"] != current] if current else df
+    resid_model = sm.OLS(
+        completed["team_orating_plus"], sm.add_constant(completed["team_ts_plus"])
+    ).fit()
+    a, b = resid_model.params["const"], resid_model.params["team_ts_plus"]
+    print(f"Possession+ regression (completed seasons): oRating+ = {a:.3f} + {b:.3f} x TS+")
+    df["team_possession_residual"] = df["team_orating_plus"] - (a + b * df["team_ts_plus"])
     df["team_possession_plus"] = 100 + df["team_possession_residual"]
 
     for col in ("team_orating_plus", "team_ts_plus", "team_possession_plus"):

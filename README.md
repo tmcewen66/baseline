@@ -61,20 +61,35 @@ The Streamlit app, **[Baseline](https://baselineanalytics.streamlit.app/)**, has
 
 ## Data
 
-- Seasons 2000-01 through 2025-26
+- Seasons 2000-01 through the current season, **updated automatically every morning** during the regular season
 - Player and team season data from [Basketball-Reference](https://www.basketball-reference.com/) via [`basketball_reference_web_scraper`](https://github.com/jaebradley/basketball_reference_web_scraper)
 - Per-100-possession, scoring split and team advanced stats from NBA.com via [`nba_api`](https://github.com/swar/nba_api)
-- Everything is stored in a single SQLite database, `data/nba_stats.db`, with a mapping step that links Basketball-Reference and NBA.com player IDs
+- Everything is stored in a SQLite database, with a mapping step that links Basketball-Reference and NBA.com player IDs
+
+### Daily updates
+
+A [GitHub Actions workflow](.github/workflows/daily-update.yml) runs every morning from October through April:
+
+1. Downloads the full database (`nba_stats.db`, every raw and derived table) from the repo's `data-latest` release
+2. Scrapes the current season from Basketball-Reference and NBA.com, replacing only that season's rows
+3. Rebuilds the league averages, Scoring+, oRating+ and the app tables, stopping if any step fails or a season goes missing
+4. Uploads the updated full database back to the release and commits the small `data/app.db` the app reads, which triggers a redeploy on Streamlit Cloud
+
+The full database lives on a release rather than in git so that daily updates don't bloat the repo's history.
 
 ## Project structure
 
 ```
 baseline_app.py         Streamlit app
-data/                   SQLite database and team colors
+run_pipeline.py         runs the whole data pipeline in order
+data/                   app.db (tables the app reads) and team colors
 pipeline/
   collect/              scrapers that pull raw data into the database
   transform/            scripts that build league averages, profiles and career tables
   metrics/              Scoring+ and oRating+ calculations
+  export_app_db.py      copies the app's tables into data/app.db
+  common.py             shared paths and season helpers
+.github/workflows/      the daily update job
 notebooks/              exploratory and methodology analysis
 docs/                   methodology write-ups and their charts
 ```
@@ -88,32 +103,23 @@ pip install -r requirements.txt
 streamlit run baseline_app.py
 ```
 
-The database is included in the repo, so the app runs without re-scraping anything.
+`data/app.db` is included in the repo, so the app runs without scraping anything.
 
-### Rebuilding the data
+### Running the pipeline
 
-Run the pipeline scripts from the project root in this order (each one reads tables written by earlier steps):
+`run_pipeline.py` runs every step in order and stops at the first failure. It needs the full database, which you can download from the release with the [GitHub CLI](https://cli.github.com/):
 
 ```bash
-# 1. Collect raw data (slow: requests are rate limited)
-python pipeline/collect/brdatascraping.py
-python pipeline/collect/nbadatascraping.py   # also rebuilds the BR-to-NBA ID mapping
+gh release download data-latest --pattern nba_stats.db --dir data --clobber
+```
 
-# 2. League averages and base tables
-python pipeline/transform/league_averages.py
-python pipeline/transform/league_average_nba.py
-python pipeline/transform/derived_stats.py
-python pipeline/transform/scoring_profile.py
-python pipeline/transform/team_colors.py
+Then:
 
-# 3. Era-adjusted metrics
-python pipeline/metrics/scoring_plus.py
-python pipeline/metrics/team_scoring_plus.py
-
-# 4. Tables the app reads
-python pipeline/transform/player_profile.py
-python pipeline/transform/team_profile.py
-python pipeline/transform/career_averages.py
+```bash
+python run_pipeline.py                  # update the current season (what the daily job runs)
+python run_pipeline.py --season 2026    # refresh a specific season, by end year
+python run_pipeline.py --all            # rebuild every season from scratch (slow: requests are rate limited)
+python run_pipeline.py --skip-collect   # no scraping, just recompute from the existing database
 ```
 
 ## Tools

@@ -1,0 +1,82 @@
+name: Daily data update
+
+# Pulls the latest stats from Basketball-Reference and NBA.com, rebuilds every
+# table, and commits the refreshed data/app.db. Pushing that commit makes
+# Streamlit Cloud redeploy the app with the new data.
+#
+# The full database (data/nba_stats.db, about 31 MB) is too big to commit every
+# day, so it's stored as a file on the "data-latest" GitHub Release instead.
+# Each run downloads it, updates it, and uploads it back.
+
+on:
+  schedule:
+    # 11:00 UTC = 7am Eastern (6am in winter), after the previous night's games.
+    # Only October through April, while the regular season is being played.
+    - cron: "0 11 * 10-12,1-4 *"
+  workflow_dispatch: # adds a "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write # push the app.db commit and update the release
+
+concurrency:
+  group: daily-data-update
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: data-latest
+  # Last commit that still had data/nba_stats.db in git. Used only on the very
+  # first run, to seed the release before it exists.
+  BOOTSTRAP_COMMIT: 576081663e938c7e410b6877890c5389327518dd
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download full database
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release download "$RELEASE_TAG" --pattern nba_stats.db --dir data --clobber
+          else
+            echo "No $RELEASE_TAG release yet. Seeding it from commit $BOOTSTRAP_COMMIT."
+            git fetch --depth=1 origin "$BOOTSTRAP_COMMIT"
+            git show "$BOOTSTRAP_COMMIT:data/nba_stats.db" > data/nba_stats.db
+            gh release create "$RELEASE_TAG" data/nba_stats.db \
+              --title "Full database (updated daily)" \
+              --notes "data/nba_stats.db with every scraped and derived table. Replaced by the Daily data update workflow after each successful run."
+          fi
+          ls -lh data/nba_stats.db
+
+      - name: Run pipeline
+        run: python run_pipeline.py
+
+      # Only reached if every pipeline step succeeded.
+      - name: Upload updated full database
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE_TAG" data/nba_stats.db --clobber
+
+      - name: Commit app database
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/app.db
+          if git diff --cached --quiet; then
+            echo "No new data today."
+            exit 0
+          fi
+          git commit -m "Daily data update ($(date -u +%Y-%m-%d))"
+          git pull --rebase
+          git push

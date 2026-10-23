@@ -20,14 +20,17 @@ import plotly.graph_objects as go
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
+# Slim copy of the app tables, rebuilt daily by run_pipeline.py (see pipeline/export_app_db.py).
+DB_PATH = str(PROJECT_ROOT / "data" / "app.db")
+# How long loaded data is cached before re-reading the database, so daily updates show up.
+DATA_TTL = "6h"
 METHODOLOGY_PATH = PROJECT_ROOT / "docs" / "scoring_plus_methodology.md"
 O_RATING_METHODOLOGY_PATH = PROJECT_ROOT / "docs" / "o_rating_plus_methodology.md"
 
 st.set_page_config(page_title="Baseline", layout="wide")
 
 
-@st.cache_data
+@st.cache_data(ttl=DATA_TTL)
 def load_player_profile(db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         df = pd.read_sql("SELECT * FROM player_profile", con)
@@ -35,7 +38,7 @@ def load_player_profile(db_path: str = DB_PATH) -> pd.DataFrame:
     return df
 
 
-@st.cache_data
+@st.cache_data(ttl=DATA_TTL)
 def load_team_profile(db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         df = pd.read_sql("SELECT * FROM team_profile", con)
@@ -43,7 +46,7 @@ def load_team_profile(db_path: str = DB_PATH) -> pd.DataFrame:
     return df
 
 
-@st.cache_data
+@st.cache_data(ttl=DATA_TTL)
 def load_team_colors(db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         return pd.read_sql(
@@ -52,7 +55,7 @@ def load_team_colors(db_path: str = DB_PATH) -> pd.DataFrame:
         )
 
 
-@st.cache_data
+@st.cache_data(ttl=DATA_TTL)
 def load_career_averages(db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         return pd.read_sql("SELECT * FROM career_averages", con)

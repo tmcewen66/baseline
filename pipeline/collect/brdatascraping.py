@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Fetches basic and advanced NBA player season totals from Basketball-Reference
-for all seasons from 2000-01 through 2025-26.
+Fetches basic and advanced NBA player season totals from Basketball-Reference.
+
+By default only the current season is fetched, and only its rows are replaced
+in basic_stats/advanced_stats. Use --all to rebuild every season from 2000-01
+on, or --season END_YEAR to refresh specific seasons.
 
 Results are stored in two dicts keyed by season_end_year:
     basic_dfs[2024]    -> DataFrame for the 2023-24 season, indexed by slug
@@ -9,14 +12,17 @@ Results are stored in two dicts keyed by season_end_year:
 """
 
 import sqlite3
+import sys
 import time
 import pandas as pd
 from basketball_reference_web_scraper import client
 from pathlib import Path
 
-SEASONS = list(range(2001, 2027))  # 2000-01 through 2025-26
-REQUEST_DELAY_SECONDS = 3
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from pipeline.common import all_seasons, parse_season_args, replace_season_rows, season_label  # noqa: E402
+
+REQUEST_DELAY_SECONDS = 3
 DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 
 BASIC_NUMERIC_COLS = [
@@ -53,29 +59,33 @@ def _dedupe_advanced(df: pd.DataFrame) -> pd.DataFrame:
     return df[keep].drop(columns=["is_combined_totals"]).set_index("slug")
 
 
-def fetch_all_seasons(seasons=SEASONS):
+def fetch_all_seasons(seasons=None):
     """
-    Returns (basic_dfs, advanced_dfs) — two dicts of DataFrames, each keyed
-    by season_end_year and indexed by player slug.
+    Returns (basic_dfs, advanced_dfs): two dicts of DataFrames, each keyed
+    by season_end_year and indexed by player slug. Seasons with no games
+    played yet are skipped.
     """
+    seasons = seasons or all_seasons()
     basic_dfs = {}
     advanced_dfs = {}
 
     for year in seasons:
-        season_label = f"{year - 1}-{str(year)[-2:]}"
-        print(f"Fetching {season_label}...", end=" ", flush=True)
+        print(f"Fetching {season_label(year)}...", end=" ", flush=True)
 
         basic_rows = client.players_season_totals(season_end_year=year)
-        basic_df = pd.DataFrame(basic_rows)
-        basic_dfs[year] = _aggregate_basic(basic_df)
         time.sleep(REQUEST_DELAY_SECONDS)
+        if not basic_rows:
+            print("no games played yet, skipping")
+            continue
+        basic_dfs[year] = _aggregate_basic(pd.DataFrame(basic_rows))
 
         adv_rows = client.players_advanced_season_totals(
             season_end_year=year, include_combined_values=True
         )
-        adv_df = pd.DataFrame(adv_rows)
-        advanced_dfs[year] = _dedupe_advanced(adv_df)
         time.sleep(REQUEST_DELAY_SECONDS)
+        if not adv_rows:
+            raise RuntimeError(f"{season_label(year)}: basic stats returned rows but advanced stats did not")
+        advanced_dfs[year] = _dedupe_advanced(pd.DataFrame(adv_rows))
 
         print(
             f"basic={len(basic_dfs[year])} players, "
@@ -105,18 +115,29 @@ def _prepare_for_db(dfs_dict: dict, serialize_team: bool = False) -> pd.DataFram
     return pd.concat(frames, ignore_index=True)
 
 
-def save_to_sqlite(basic_dfs: dict, advanced_dfs: dict, db_path: str = DB_PATH):
+def save_to_sqlite(basic_dfs: dict, advanced_dfs: dict, db_path: str = DB_PATH, full_rebuild: bool = False):
+    """
+    full_rebuild=True replaces both tables entirely. Otherwise only the seasons
+    in basic_dfs are replaced and every other season is left as is.
+    """
     basic_master = _prepare_for_db(basic_dfs, serialize_team=False)
     advanced_master = _prepare_for_db(advanced_dfs, serialize_team=True)
+    seasons = sorted(basic_dfs)
 
     with sqlite3.connect(db_path) as con:
-        basic_master.to_sql("basic_stats", con, if_exists="replace", index=False)
+        if full_rebuild:
+            basic_master.to_sql("basic_stats", con, if_exists="replace", index=False)
+        else:
+            replace_season_rows(con, "basic_stats", basic_master, seasons)
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_basic_slug_season "
             "ON basic_stats (slug, season_end_year)"
         )
 
-        advanced_master.to_sql("advanced_stats", con, if_exists="replace", index=False)
+        if full_rebuild:
+            advanced_master.to_sql("advanced_stats", con, if_exists="replace", index=False)
+        else:
+            replace_season_rows(con, "advanced_stats", advanced_master, seasons)
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_advanced_slug_season "
             "ON advanced_stats (slug, season_end_year)"
@@ -130,6 +151,11 @@ def save_to_sqlite(basic_dfs: dict, advanced_dfs: dict, db_path: str = DB_PATH):
 
 
 if __name__ == "__main__":
-    basic_dfs, advanced_dfs = fetch_all_seasons()
-    save_to_sqlite(basic_dfs, advanced_dfs)
-    print(f"\nDone. {len(basic_dfs)} seasons loaded and saved to {DB_PATH}.")
+    seasons = parse_season_args("Fetch player season totals from Basketball-Reference.")
+    full_rebuild = seasons is None
+    basic_dfs, advanced_dfs = fetch_all_seasons(seasons)
+    if not basic_dfs:
+        print("\nNo season data to save. Database left unchanged.")
+        sys.exit(0)
+    save_to_sqlite(basic_dfs, advanced_dfs, full_rebuild=full_rebuild)
+    print(f"\nDone. {len(basic_dfs)} season(s) saved to {DB_PATH}.")
