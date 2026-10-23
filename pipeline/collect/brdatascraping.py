@@ -12,10 +12,12 @@ import sqlite3
 import time
 import pandas as pd
 from basketball_reference_web_scraper import client
+from pathlib import Path
 
 SEASONS = list(range(2001, 2027))  # 2000-01 through 2025-26
 REQUEST_DELAY_SECONDS = 3
-DB_PATH = "nba_stats.db"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 
 BASIC_NUMERIC_COLS = [
     "games_played", "games_started", "minutes_played",

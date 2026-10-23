@@ -11,10 +11,12 @@ import io
 import sqlite3
 import pandas as pd
 import requests
+from pathlib import Path
 
 URL = "https://www.basketball-reference.com/leagues/NBA_stats_per_poss.html"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; nba-stats-research/1.0)"}
-DB_PATH = "nba_stats.db"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 FIRST_SEASON_END_YEAR = 2001  # 2000-01 season
 
 COLUMN_MAP = {

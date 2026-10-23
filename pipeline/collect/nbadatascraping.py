@@ -16,10 +16,15 @@ import sqlite3
 import time
 import pandas as pd
 from nba_api.stats.endpoints import leaguedashplayerstats, leaguedashteamstats
+from pathlib import Path
 
-import Data_Collection.br_to_nba_mapping as br_to_nba_mapping
+try:
+    from . import br_to_nba_mapping  # run as: python -m pipeline.collect.nbadatascraping
+except ImportError:
+    import br_to_nba_mapping  # run as: python pipeline/collect/nbadatascraping.py
 
-DB_PATH = "nba_stats.db"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 TABLE_NAME = "per_100_stats"
 SCORING_TABLE_NAME = "scoring_splits"
 TEAM_TABLE_NAME = "team_per_100_stats"

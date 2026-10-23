@@ -6,9 +6,11 @@ Loads teamcolors.csv into a DataFrame of team primary/secondary colors.
 import sqlite3
 
 import pandas as pd
+from pathlib import Path
 
-CSV_PATH = "teamcolors.csv"
-DB_PATH = "nba_stats.db"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
+CSV_PATH = str(PROJECT_ROOT / "data" / "teamcolors.csv")
 
 
 def load_team_colors(csv_path: str = CSV_PATH) -> pd.DataFrame:

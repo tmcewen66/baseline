@@ -4,13 +4,14 @@ Streamlit app for exploring player_profile and team_profile: era-adjusted
 scoring metrics (scoring+, pts+, ts+) alongside traditional counting stats,
 filterable by season and scoring-title qualification.
 
-Run with: .conda/bin/streamlit run baseline_app.py
+Run from the project root with: .conda/bin/streamlit run baseline_app.py
 """
 
 import base64
 import html
 import re
 import sqlite3
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -18,9 +19,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-DB_PATH = "nba_stats.db"
-METHODOLOGY_PATH = "scoring_plus_methodology.md"
-O_RATING_METHODOLOGY_PATH = "o_rating_plus_methodology.md"
+PROJECT_ROOT = Path(__file__).resolve().parent
+DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
+METHODOLOGY_PATH = PROJECT_ROOT / "docs" / "scoring_plus_methodology.md"
+O_RATING_METHODOLOGY_PATH = PROJECT_ROOT / "docs" / "o_rating_plus_methodology.md"
 
 st.set_page_config(page_title="Baseline", layout="wide")
 
@@ -589,7 +591,7 @@ def render_landing(df: pd.DataFrame, team_profile_df: pd.DataFrame) -> None:
 # --- About page ---------------------------------------------------------------
 
 
-def render_methodology(path: str) -> None:
+def render_methodology(path: Path) -> None:
     with open(path, encoding="utf-8") as f:
         methodology = f.read()
 
@@ -603,7 +605,8 @@ def render_methodology(path: str) -> None:
         if i % 2:
             # Center each figure in the middle column so it doesn't span the wide layout.
             _, mid, _ = st.columns([1, 3, 1])
-            mid.image(part, width="stretch")
+            # Image links in the doc are relative to the doc's own folder.
+            mid.image(str(path.parent / part), width="stretch")
         elif part.strip():
             st.markdown(part, unsafe_allow_html=True)
 

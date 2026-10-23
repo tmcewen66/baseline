@@ -9,8 +9,10 @@ will automatically be persisted to the database.
 
 import sqlite3
 import pandas as pd
+from pathlib import Path
 
-DB_PATH = "nba_stats.db"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 
 
 def load_tables(db_path: str = DB_PATH) -> tuple[pd.DataFrame, pd.DataFrame]:
