@@ -30,7 +30,9 @@ fi
 
 step "Creating the job's Python 3.14 environment (with the GitHub CLI)"
 if [[ ! -x "$JOB_DIR/.venv/bin/python" ]]; then
-  "$CONDA" create --yes --quiet --prefix "$JOB_DIR/.venv" -c conda-forge python=3.14 gh
+  rm -rf "$JOB_DIR/.venv"  # clear out any half-created env from a failed attempt
+  # --solver classic: works even when Anaconda's libmamba solver plugin is broken
+  "$CONDA" create --yes --quiet --solver classic --prefix "$JOB_DIR/.venv" -c conda-forge python=3.14 gh
 fi
 "$JOB_DIR/.venv/bin/python" -m pip install --quiet -r "$JOB_DIR/requirements.txt"
 shasum "$JOB_DIR/requirements.txt" | cut -d' ' -f1 > "$JOB_DIR/.venv/.requirements-hash"
