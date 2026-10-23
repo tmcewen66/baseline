@@ -18,3 +18,7 @@ __pycache__/
 # Full database lives on the data-latest GitHub Release (see .github/workflows/daily-update.yml)
 data/nba_stats.db
 data/app.db.tmp
+
+# Daily job environment and logs (scripts/daily_update_mac.sh)
+.venv/
+logs/

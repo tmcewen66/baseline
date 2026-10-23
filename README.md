@@ -68,14 +68,14 @@ The Streamlit app, **[Baseline](https://baselineanalytics.streamlit.app/)**, has
 
 ### Daily updates
 
-A [GitHub Actions workflow](.github/workflows/daily-update.yml) runs every morning from October through April:
+A scheduled job ([`scripts/daily_update_mac.sh`](scripts/daily_update_mac.sh)) runs every morning from October through April:
 
 1. Downloads the full database (`nba_stats.db`, every raw and derived table) from the repo's `data-latest` release
 2. Scrapes the current season from Basketball-Reference and NBA.com, replacing only that season's rows
 3. Rebuilds the league averages, Scoring+, oRating+ and the app tables, stopping if any step fails or a season goes missing
 4. Uploads the updated full database back to the release and commits the small `data/app.db` the app reads, which triggers a redeploy on Streamlit Cloud
 
-The full database lives on a release rather than in git so that daily updates don't bloat the repo's history.
+The job runs on a Mac via `launchd` rather than in GitHub Actions because NBA.com blocks requests from cloud servers (the Basketball-Reference half worked from GitHub; NBA.com timed out). [`scripts/setup_mac_daily_job.sh`](scripts/setup_mac_daily_job.sh) sets it up. The full database lives on a release rather than in git so that daily updates don't bloat the repo's history.
 
 ## Project structure
 
@@ -89,7 +89,7 @@ pipeline/
   metrics/              Scoring+ and oRating+ calculations
   export_app_db.py      copies the app's tables into data/app.db
   common.py             shared paths and season helpers
-.github/workflows/      the daily update job
+scripts/                the daily update job and its one-time setup
 notebooks/              exploratory and methodology analysis
 docs/                   methodology write-ups and their charts
 ```
