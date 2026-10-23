@@ -1,4 +1,4 @@
-# oRating+ Methodology
+<h1 align="center">oRating+ Methodology</h1>
 
 ## Introduction
 
