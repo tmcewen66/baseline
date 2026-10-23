@@ -7,14 +7,22 @@ made-field-goals-based threshold from scoring_profile_analysis.ipynb, prorated
 by team games played the same way scoring_plus.py prorates its minutes
 threshold. The uast_bin/uast_rating/profile columns reproduce the percentile
 binning developed in that notebook.
+
+A player also needs MIN_GAMES_QUALIFIED games to be qualified. The percentile
+cutoffs are still computed from everyone over the prorated threshold, so
+profiles can be assigned early in a season before anyone reaches the floor.
 """
 
 import sqlite3
+import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from pipeline.common import MIN_GAMES_QUALIFIED  # noqa: E402
+
 DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 NUM_BINS = 9
 FULL_SEASON_MADE_FIELD_GOAL_THRESHOLD = 300  # NBA's standard for the FG% leaderboard
@@ -57,9 +65,10 @@ def compute_scoring_profile(
 
     df["age"] = df["age"].astype(float)
     df["threshold"] = FULL_SEASON_MADE_FIELD_GOAL_THRESHOLD * (df["team_gp"] / 82)
-    df["qualified"] = df["made_field_goals"] >= df["threshold"]
+    meets_threshold = df["made_field_goals"] >= df["threshold"]
+    df["qualified"] = meets_threshold & (df["gp"] >= MIN_GAMES_QUALIFIED)
 
-    cutoffs_df = compute_season_cutoffs(df[df["qualified"]])
+    cutoffs_df = compute_season_cutoffs(df[meets_threshold])
     cutoff_cols = [c for c in cutoffs_df.columns if c != "season_end_year"]
 
     # Look up each row's season cutoffs, keeping order aligned with df so the

@@ -27,7 +27,7 @@ $$
 - **PTS+**: points per 100 possessions vs. the league-average player (scoring volume)
 - **TS+**: true shooting percentage vs. the league average (scoring efficiency)
 
-The 0.205 / 0.795 weights are not assumed. They come from regressing PTS+ and TS+ against offensive impact metrics (OBPM and OWS/48), validated with a time-based train/test split and 5-fold cross-validation, and checked for stability across seasons. Players need at least 1,500 minutes to qualify.
+The 0.205 / 0.795 weights are not assumed. They come from regressing PTS+ and TS+ against offensive impact metrics (OBPM and OWS/48), validated with a time-based train/test split and 5-fold cross-validation, and checked for stability across seasons. Players need at least 1,500 minutes (prorated during the season) and 20 games to qualify; teams need 20 games.
 
 Full write-up: [Scoring+ Methodology](docs/scoring_plus_methodology.md)
 

@@ -8,10 +8,14 @@ performance to the league average and adjust for context.
 """
 
 import sqlite3
+import sys
 import pandas as pd
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+from pipeline.common import MIN_GAMES_QUALIFIED  # noqa: E402
+
 DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 
 
@@ -23,7 +27,7 @@ def load_tables(
         advanced = pd.read_sql("SELECT season_end_year, slug, name, true_shooting_percentage FROM advanced_stats", con)
         league_avg = pd.read_sql("SELECT season_end_year, league_avg_true_shooting_percentage FROM league_averages", con)
         nba_per_100_avg = pd.read_sql("SELECT season_end_year, per_100_pts FROM nba_per_100_averages", con)
-        basic = pd.read_sql("SELECT season_end_year, slug, minutes_played FROM basic_stats", con)
+        basic = pd.read_sql("SELECT season_end_year, slug, games_played, minutes_played FROM basic_stats", con)
         team_per_100 = pd.read_sql("SELECT season_end_year, team_id, gp FROM team_per_100_stats", con)
     return per_100, advanced, league_avg, nba_per_100_avg, basic, team_per_100
 
@@ -51,14 +55,16 @@ def compute_scoring_plus(
     df = df.merge(basic, on=["slug", "season_end_year"])
     df = df.merge(team_per_100.rename(columns={"gp": "team_gp"}), on=["team_id", "season_end_year"])
 
+    # 1,500 minutes over a full season, prorated by team games played, plus a
+    # minimum games floor so a handful of early-season games can't qualify.
     df["threshold"] = 1500 * (df["team_gp"] / 82)
-    df["qualified"] = df["minutes_played"] >= df["threshold"]
+    df["qualified"] = (df["minutes_played"] >= df["threshold"]) & (df["games_played"] >= MIN_GAMES_QUALIFIED)
 
     return df[[
         "season_end_year", "slug", "name", "per_100_pts", "true_shooting_percentage",
         "league_avg_per_100_pts_per_player", "league_avg_true_shooting_percentage",
         "pts_plus", "ts_plus", "scoring_plus",
-        "team_gp", "minutes_played", "threshold", "qualified",
+        "team_gp", "games_played", "minutes_played", "threshold", "qualified",
     ]]
 
 

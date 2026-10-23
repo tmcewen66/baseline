@@ -22,7 +22,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
-from pipeline.common import in_progress_season  # noqa: E402
+from pipeline.common import MIN_GAMES_QUALIFIED, in_progress_season  # noqa: E402
 
 DB_PATH = str(PROJECT_ROOT / "data" / "nba_stats.db")
 
@@ -61,6 +61,7 @@ def compute_team_scoring_plus(
     print(f"Possession+ regression (completed seasons): oRating+ = {a:.3f} + {b:.3f} x TS+")
     df["team_possession_residual"] = df["team_orating_plus"] - (a + b * df["team_ts_plus"])
     df["team_possession_plus"] = 100 + df["team_possession_residual"]
+    df["qualified"] = df["gp"] >= MIN_GAMES_QUALIFIED
 
     for col in ("team_orating_plus", "team_ts_plus", "team_possession_plus"):
         df[f"{col}_rank"] = (
@@ -75,7 +76,7 @@ def compute_team_scoring_plus(
         )
 
     return df[[
-        "season_end_year", "team_id", "team_name", "gp", "w", "l", "w_pct",
+        "season_end_year", "team_id", "team_name", "gp", "qualified", "w", "l", "w_pct",
         "off_rating", "ast_pct", "pct_uast_fgm", "ts_pct",
         "league_off_rating", "league_ast_pct", "league_pct_uast_fgm", "league_ts_pct",
         "team_orating_plus", "team_ts_plus", "team_possession_residual", "team_possession_plus",

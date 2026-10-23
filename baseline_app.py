@@ -53,6 +53,7 @@ def load_player_profile(version: tuple, db_path: str = DB_PATH) -> pd.DataFrame:
 def load_team_profile(version: tuple, db_path: str = DB_PATH) -> pd.DataFrame:
     with sqlite3.connect(db_path) as con:
         df = pd.read_sql("SELECT * FROM team_profile", con)
+    df["qualified"] = df["qualified"].astype(bool)
     df["season"] = (df["season_end_year"] - 1).astype(str) + "-" + df["season_end_year"].astype(str)  # type: ignore
     return df
 
@@ -563,6 +564,7 @@ def render_landing(df: pd.DataFrame, team_profile_df: pd.DataFrame) -> None:
         filtered_teams_df = team_profile_df[team_profile_df["season"] == season_choice]
 
     qualified_players_df = filtered_players_df[filtered_players_df["qualified"]]
+    qualified_teams_df = filtered_teams_df[filtered_teams_df["qualified"]]
     show_season_in_top = season_choice == "All Seasons"
     leaders_label = "All-Time" if season_choice == "All Seasons" else season_choice
 
@@ -580,25 +582,25 @@ def render_landing(df: pd.DataFrame, team_profile_df: pd.DataFrame) -> None:
 
     st.divider()
 
-    st.subheader(f"Top 5 Teams — {leaders_label}")
+    st.subheader(f"Top 5 Teams — {leaders_label} (qualified teams)")
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("**oRating+**")
         render_leaderboard(
-            filtered_teams_df, "team_orating_plus", show_season_in_top,
-            name_col="team_name", empty_message="No teams found.",
+            qualified_teams_df, "team_orating_plus", show_season_in_top,
+            name_col="team_name", empty_message="No qualified teams yet.",
         )
     with col2:
         st.markdown("**TS+**")
         render_leaderboard(
-            filtered_teams_df, "team_ts_plus", show_season_in_top,
-            name_col="team_name", empty_message="No teams found.",
+            qualified_teams_df, "team_ts_plus", show_season_in_top,
+            name_col="team_name", empty_message="No qualified teams yet.",
         )
     with col3:
         st.markdown("**Possession+**")
         render_leaderboard(
-            filtered_teams_df, "team_possession_plus", show_season_in_top,
-            name_col="team_name", empty_message="No teams found.",
+            qualified_teams_df, "team_possession_plus", show_season_in_top,
+            name_col="team_name", empty_message="No qualified teams yet.",
         )
 
 
@@ -1758,28 +1760,29 @@ def render_teams(df: pd.DataFrame, team_profile_df: pd.DataFrame) -> None:
     else:
         filtered_df = team_profile_df[team_profile_df["season"] == season_choice]
 
+    qualified_teams_df = filtered_df[filtered_df["qualified"]]
     show_season_in_top = season_choice == "All Seasons"
     leaders_label = "All-Time" if season_choice == "All Seasons" else season_choice
-    st.subheader(f"Top 5 — {leaders_label}")
+    st.subheader(f"Top 5 — {leaders_label} (qualified teams)")
 
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("**oRating+**")
         render_leaderboard(
-            filtered_df, "team_orating_plus", show_season_in_top,
-            name_col="team_name", empty_message="No teams found.",
+            qualified_teams_df, "team_orating_plus", show_season_in_top,
+            name_col="team_name", empty_message="No qualified teams yet.",
         )
     with col2:
         st.markdown("**TS+**")
         render_leaderboard(
-            filtered_df, "team_ts_plus", show_season_in_top,
-            name_col="team_name", empty_message="No teams found.",
+            qualified_teams_df, "team_ts_plus", show_season_in_top,
+            name_col="team_name", empty_message="No qualified teams yet.",
         )
     with col3:
         st.markdown("**Possession+**")
         render_leaderboard(
-            filtered_df, "team_possession_plus", show_season_in_top,
-            name_col="team_name", empty_message="No teams found.",
+            qualified_teams_df, "team_possession_plus", show_season_in_top,
+            name_col="team_name", empty_message="No qualified teams yet.",
         )
 
     st.divider()
@@ -2299,7 +2302,7 @@ PLAYER_AXIS_EXCLUDED_COLS = {
     "player_id", "qualified", "qualified_ast", "season_end_year", "team_id", "uast_bin",
 }
 TEAM_AXIS_EXCLUDED_COLS = {
-    "season_end_year", "w", "l", "gp", "ast_pct",
+    "season_end_year", "w", "l", "gp", "qualified", "ast_pct",
     "league_ast_pct", "league_off_rating", "league_pct_uast_fgm", "league_ts_pct",
     "oreb_pct_rank", "pct_uast_fgm_rank", "team_orating_plus_rank", "team_possession_plus_rank",
     "team_ts_plus_rank", "team_id", "tm_tov_pct_rank",

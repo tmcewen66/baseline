@@ -18,6 +18,11 @@ APP_DB_PATH = str(PROJECT_ROOT / "data" / "app.db")
 
 FIRST_SEASON_END_YEAR = 2001  # 2000-01 season
 
+# Minimum games played to qualify for leaderboards, for players and teams.
+# Full-season thresholds already imply far more games than this, so it only
+# matters early in a season, when the prorated thresholds are tiny.
+MIN_GAMES_QUALIFIED = 20
+
 # Regular season runs from October through mid-April. Playoff games are not
 # part of the regular-season stats, so May through September counts as offseason.
 _IN_SEASON_MONTHS = {10, 11, 12, 1, 2, 3, 4}
