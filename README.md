@@ -94,7 +94,7 @@ notebooks/              exploratory and methodology analysis
 docs/                   methodology write-ups and their charts
 ```
 
-## Running it Locally
+## Running It Locally
 
 Requires Python 3.14.
 
