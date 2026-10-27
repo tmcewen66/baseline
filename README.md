@@ -4,6 +4,8 @@
 
 <p align="center"><a href="https://baselineanalytics.streamlit.app/"><strong>Open the live app</strong></a></p>
 
+<p align="center">The app may take 30-45 seconds to wake up after periods of inactivity.</p>
+
 ## Why This Project Exists
 
 NBA offense has changed a lot in the past decade. Since 2000-01, league points per game has risen about 22% and offensive rating about 13%. In 2012-13, only 11 players averaged 20+ points per game (minimum 1,500 minutes). By 2022-23, 52 did. That makes raw numbers from different seasons hard to compare.
