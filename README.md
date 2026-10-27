@@ -16,12 +16,12 @@ Tony Parker (2012-13) and Anfernee Simons (2022-23) put up nearly identical raw 
 
 ## The statistics
 
-### Scoring+ (players)
+### Scoring+ (Players)
 
 A single number summarizing how effective a player's scoring was relative to his league, combining volume and efficiency:
 
 $$
-\text{Scoring}^{+} = 100 + 0.205\,(\text{PTS}^{+} - 100) + 0.795\,(\text{TS}^{+} - 100)
+\text{Scoring}^{+} = 100 + 0.205(\text{PTS}^{+} - 100) + 0.795(\text{TS}^{+} - 100)
 $$
 
 - **PTS+**: points per 100 possessions vs. the league-average player (scoring volume)
@@ -31,7 +31,7 @@ The 0.205 / 0.795 weights are not assumed. They come from regressing PTS+ and TS
 
 Full write-up: [Scoring+ Methodology](docs/scoring_plus_methodology.md)
 
-### oRating+ (teams)
+### oRating+ (Teams)
 
 A team's offensive rating indexed to the league average of its season:
 
