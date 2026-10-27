@@ -8,9 +8,11 @@
 
 ## Why This Project Exists
 
-NBA offense has changed a lot in the past decade. Since 2000-01, league points per game has risen about 22% and offensive rating about 13%. In 2012-13, only 11 players averaged 20+ points per game (minimum 1,500 minutes). By 2022-23, 52 did. That makes raw numbers from different seasons hard to compare.
+NBA offenses have evolved a lot in recent years leading to scoring inflation. Since 2000-01, league points per game has risen about 22% and offensive rating about 13%. In 2012-13, only 11 players averaged 20+ points per game (minimum 1,500 minutes) while ten years later in 2022-23, 52 did. That makes raw numbers from different seasons very difficult to compare.
 
-Baseball solved this problem long ago with stats like ERA+ and OPS+, which index a player to his league's average so that **100 always means league average**. Baseline brings that idea to basketball, with new player and team statistics built from existing box score and advanced data, plus a Streamlit web app to explore them.
+Baseball solved this problem of comparing across eras long ago with stats like ERA+ and OPS+, which index a player to his league's average so that **100 always means league average**. Baseline brings that idea to basketball, with new player and team statistics built from existing box score and advanced data, plus a Streamlit web app to explore them.
+
+![On Paper, These Seasons Look Nearly Identical](docs/images/parker_vs_simons_raw_stats.png)
 
 ![Adjusted for Era, Parker Pulls Clearly Ahead](docs/images/parker_vs_simons_scoring_plus.png)
 
