@@ -4,7 +4,7 @@
 
 <p align="center"><a href="https://baselineanalytics.streamlit.app/"><strong>Open the live app</strong></a></p>
 
-## Why this project exists
+## Why This Project Exists
 
 NBA offense has changed a lot in the past decade. Since 2000-01, league points per game has risen about 22% and offensive rating about 13%. In 2012-13, only 11 players averaged 20+ points per game (minimum 1,500 minutes). By 2022-23, 52 did. That makes raw numbers from different seasons hard to compare.
 
@@ -14,7 +14,7 @@ Baseball solved this problem long ago with stats like ERA+ and OPS+, which index
 
 Tony Parker (2012-13) and Anfernee Simons (2022-23) put up nearly identical raw scoring numbers. Once each season is measured against its own league, Parker posts a Scoring+ of 118 (6th in the league) and Simons a 106 (73rd).
 
-## The statistics
+## The Statistics
 
 ### Scoring+ (Players)
 
@@ -48,7 +48,7 @@ The write-up also tests whether the 2000s offenses that top the all-time oRating
 
 Full write-up: [oRating+ Methodology](docs/o_rating_plus_methodology.md)
 
-## The app
+## The App
 
 The Streamlit app, **[Baseline](https://baselineanalytics.streamlit.app/)**, has pages for:
 
@@ -77,7 +77,7 @@ A scheduled job ([`scripts/daily_update_mac.sh`](scripts/daily_update_mac.sh)) r
 
 The job runs on a Mac via `launchd` rather than in GitHub Actions because NBA.com blocks requests from cloud servers (the Basketball-Reference half worked from GitHub; NBA.com timed out). [`scripts/setup_mac_daily_job.sh`](scripts/setup_mac_daily_job.sh) sets it up. The full database lives on a release rather than in git so that daily updates don't bloat the repo's history.
 
-## Project structure
+## Project Structure
 
 ```
 baseline_app.py         Streamlit app
@@ -94,7 +94,7 @@ notebooks/              exploratory and methodology analysis
 docs/                   methodology write-ups and their charts
 ```
 
-## Running it locally
+## Running it Locally
 
 Requires Python 3.14.
 
@@ -105,7 +105,7 @@ streamlit run baseline_app.py
 
 `data/app.db` is included in the repo, so the app runs without scraping anything.
 
-### Running the pipeline
+### Running the Pipeline
 
 `run_pipeline.py` runs every step in order and stops at the first failure. It needs the full database, which you can download from the release with the [GitHub CLI](https://cli.github.com/):
 
