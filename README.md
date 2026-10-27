@@ -14,11 +14,11 @@ Baseball solved this problem of comparing across eras long ago with stats like E
 
 ![On Paper, These Seasons Look Nearly Identical](docs/images/parker_vs_simons_raw_stats.png)
 
-<p align="center"><sub><em>Parker Photo: Streeter Lecka/Getty Images. Simons Photo: Portland Trail Blazers/NBA</em></sub></p>
-
 ![Adjusted for Era, Parker Pulls Clearly Ahead](docs/images/parker_vs_simons_scoring_plus.png)
 
-Tony Parker (2012-13) and Anfernee Simons (2022-23) put up nearly identical raw scoring numbers. Once each season is measured against its own league, Parker posts a Scoring+ of 118 (6th in the league) and Simons a 106 (73rd).
+<p align="center"><sub><em>Parker Photo: Streeter Lecka/Getty Images. Simons Photo: Portland Trail Blazers/NBA</em></sub></p>
+
+Tony Parker in the 2012-13 season and Anfernee Simons in the 2022-23 season put up nearly identical raw scoring numbers. Once each season is measured against its own league using my metrics, Parker records a Scoring+ of 118 (good for 6th in the league) and Simons only a 106 (73rd in his year).
 
 ## The Statistics
 
