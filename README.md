@@ -1,6 +1,6 @@
 <h1 align="center">Baseline</h1>
 
-<p align="center"><em>Era-adjusted NBA statistics, built so a scoring season from 2005 and one from 2025 can be compared on the same scale.</em></p>
+<p align="center"><em>Scoring has never been higher. Era-adjusted basketball statistics that measure every season in context.</em></p>
 
 <p align="center"><a href="https://baselineanalytics.streamlit.app/"><strong>Open the live app</strong></a></p>
 
